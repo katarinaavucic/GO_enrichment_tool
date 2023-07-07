@@ -21,8 +21,9 @@ go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
 
 def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     columns_only_in_ranked_list_df = set(gene_list).intersection(go_annotation_df.columns)
-    print(len(columns_only_in_ranked_list_df))
-    ranked_list_df = columns_only_in_ranked_list_df
+    #print(len(columns_only_in_ranked_list_df))
+    #filter the ranked list for the intersection, keep order intact
+    ranked_list_df = [x for x in gene_list if x in columns_only_in_ranked_list_df]
     ranked_list_df = pd.DataFrame(ranked_list_df)
     ranked_list_df = ranked_list_df.rename({0: 'gene'}, axis=1)
     ranked_list_df['index'] = list(reversed((ranked_list_df.index + 1).tolist()))
