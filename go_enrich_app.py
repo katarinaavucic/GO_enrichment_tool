@@ -49,7 +49,7 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     ranked_list_df = ranked_list_df.T
 
     #this operates locally so the full annotation matrix will be untouched for the next call
-    go_annotation_df = go_annotation_df[columns_only_in_ranked_list_df]
+    go_annotation_df = go_annotation_df[list(columns_only_in_ranked_list_df)]
 
     go_annotation_df = go_annotation_df.reindex(columns=ranked_list_df.columns)
     go_annotation_df = go_annotation_df.T
