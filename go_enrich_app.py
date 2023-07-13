@@ -8,18 +8,18 @@ from statsmodels.stats import multitest
 
 data_path = os.path.join(os.path.dirname(__file__), 'data')
 
-@st.cache
+@st.cache_data
 def get_file_with_cache(filename):
     df = pd.read_csv(os.path.join(data_path, filename))
     return df
 
 
-raw_go_annotation_df = get_file_with_cache('filtered_go_annotation_df.csv.gz')
+bp_df = get_file_with_cache('bp_go_annotation_df.csv.gz')
+cc_df = get_file_with_cache('cc_go_annotation_df.csv.gz')
+mf_df = get_file_with_cache('mf_go_annotation_df.csv.gz')
 go_dictionary_df = get_file_with_cache('go_dictionary_df.csv')
 default_list = get_file_with_cache('default_ranking.txt')
 
-go_annotation_df = raw_go_annotation_df.set_index('go_id').copy()
-go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
 
 def calculate_auroc(sum_of_ranks: int, n_total: int, n_pos: int, n_neg: int) -> float:
     if n_pos == 0:
@@ -87,10 +87,10 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     sorted_analysis_df['signed_log_p'] = np.sign(sorted_analysis_df['auroc']-0.5) * -1 * np.log(sorted_analysis_df['pval'])
     sorted_analysis_df['pvalue_fdr'] = multitest.multipletests(sorted_analysis_df['pval'].tolist(), method="fdr_bh")[1]
     sorted_analysis_df = sorted_analysis_df.sort_values('pval', ascending=True)
-    sorted_analysis_df = sorted_analysis_df.rename(columns = {"n_pos" : "Genes"})
+    sorted_analysis_df = sorted_analysis_df.rename(columns = {"n_pos" : "genes"})
 
     # Display the dataframe as a table
-    st.write(sorted_analysis_df.style.format({'auroc' : "{:.2f}", 'Genes':"{:.0f}", "pval": "{:.2g}", "pvalue_fdr": "{:.2g}"}))
+    st.write(sorted_analysis_df.style.format({'auroc' : "{:.2f}", 'genes':"{:.0f}", "pval": "{:.2g}", "pvalue_fdr": "{:.2g}"}))
 
     st.download_button(
         "Download table",
@@ -106,10 +106,21 @@ st.title('Simple GO enrichment tester')
 
 
 gene_list = st.sidebar.text_area("Ranked genes (one gene symbol per line)", '\n'.join(default_list.gene_symbol), height=100)
+pathway_database = st.sidebar.selectbox("Pathway Database",["All", "Biological Process", "Cellular Component", "Molecular Function"])
+
+if pathway_database == "Biological Process":
+   go_annotation_df = bp_df
+elif pathway_database == "Cellular Component":
+   go_annotation_df = cc_df
+elif pathway_database == "Molecular Function":
+   go_annotation_df = mf_df
+else:
+    go_annotation_df = pd.concat([bp_df, cc_df, mf_df], axis=0)
+    
+go_annotation_df = go_annotation_df.set_index('go_id').copy()
+go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
 
 
-# Create an input field for the gene list
-#gene_list = st.text_area('Enter gene names (one per line)')
 
 # Split the input into a list of genes
 gene_list = gene_list.split('\n')
