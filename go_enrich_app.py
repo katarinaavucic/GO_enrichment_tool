@@ -100,22 +100,25 @@ st.title('Simple GO enrichment tester')
 bp_df1 = get_file_with_cache('bp1_go_annotation_df.csv.gz')
 bp_df2 = get_file_with_cache('bp2_go_annotation_df.csv.gz')
 bp_df3 = get_file_with_cache('bp3_go_annotation_df.csv.gz')
-cc_df = get_file_with_cache('cc_go_annotation_df.csv.gz')
-mf_df = get_file_with_cache('mf_go_annotation_df.csv.gz')
-go_dictionary_df = get_file_with_cache('go_dictionary_df.csv')
 default_list = get_file_with_cache('default_ranking.txt')
 
 gene_list = st.sidebar.text_area("Ranked genes (one gene symbol per line)", '\n'.join(default_list.gene_symbol), height=100)
-pathway_database = st.sidebar.selectbox("Pathway Database",["All", "Biological Process", "Cellular Component", "Molecular Function"])
+pathway_database = st.sidebar.selectbox("Pathway Database",["Biological Process", "Cellular Component", "Molecular Function", "All"])
 
 if pathway_database == "Biological Process":
    go_annotation_df = pd.concat([bp_df1, bp_df2, bp_df3], axis=0)
 elif pathway_database == "Cellular Component":
+   cc_df = get_file_with_cache('cc_go_annotation_df.csv.gz')
    go_annotation_df = cc_df
 elif pathway_database == "Molecular Function":
+   mf_df = get_file_with_cache('mf_go_annotation_df.csv.gz')
    go_annotation_df = mf_df
 else:
+    cc_df = get_file_with_cache('cc_go_annotation_df.csv.gz')
+    mf_df = get_file_with_cache('mf_go_annotation_df.csv.gz')
     go_annotation_df = pd.concat([bp_df1, bp_df2, bp_df3, cc_df, mf_df], axis=0)
+
+go_dictionary_df = get_file_with_cache('go_dictionary_df.csv')
 
 go_annotation_df = go_annotation_df.set_index('go_id').copy()
 go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
