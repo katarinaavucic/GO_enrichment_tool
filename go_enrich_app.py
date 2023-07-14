@@ -77,7 +77,7 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     st.download_button(
         "Download table",
         sorted_analysis_df.to_csv(index=False).encode('utf-8'),
-        "AUROC_table_genome_wide_predictions.csv",
+        "AUROC_GO_enrichment_table.csv",
         "text/csv",
         key='table-download-csv'
     )
