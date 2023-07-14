@@ -33,9 +33,8 @@ def calculate_pval(n_pos: int, n_neg: int, auroc: float) -> float:
     return p
 
 def gene_table(gene_list, go_annotation_df, go_dictionary_df):
+    # filter the ranked list for the intersection, keep order intact
     columns_only_in_ranked_list_df = set(gene_list).intersection(go_annotation_df.columns)
-
-    #filter the ranked list for the intersection, keep order intact
     ranked_list_df = [x for x in gene_list if x in columns_only_in_ranked_list_df]
     ranked_list_df = pd.DataFrame(ranked_list_df)
     ranked_list_df = ranked_list_df.rename({0: 'gene'}, axis=1)
@@ -43,7 +42,7 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     ranked_list_df = ranked_list_df.set_index('gene')
     ranked_list_df = ranked_list_df.T
 
-    #set up matrices for multiplication
+    # set up matrices for multiplication
     go_annotation_df = go_annotation_df[list(columns_only_in_ranked_list_df)]
     go_annotation_df = go_annotation_df.reindex(columns=ranked_list_df.columns)
     go_annotation_df = go_annotation_df.T
@@ -52,6 +51,7 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     analysis_df = analysis_df.rename(index={'index': 'sum_of_ranks'})
     analysis_df = analysis_df.T
 
+    # perform analysis calculations
     analysis_df['n_total'] = go_annotation_df.shape[0]
     analysis_df['n_pos'] = go_annotation_df.T.values.sum(axis=1)
     analysis_df['n_neg'] = analysis_df['n_total'] - analysis_df['n_pos']
@@ -71,7 +71,7 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
     sorted_analysis_df = sorted_analysis_df.sort_values('pval', ascending=True)
     sorted_analysis_df = sorted_analysis_df.rename(columns = {"n_pos" : "genes"})
 
-    #display the dataframe as a table
+    # display the dataframe as a table
     st.write(sorted_analysis_df.style.format({'auroc' : "{:.2f}", 'genes':"{:.0f}", "pval": "{:.2g}", "pvalue_fdr": "{:.2g}"}))
 
     st.download_button(
@@ -82,34 +82,41 @@ def gene_table(gene_list, go_annotation_df, go_dictionary_df):
         key='table-download-csv'
     )
 
+def main():
+    st.title('Simple GO Enrichment Tool')
 
-st.title('Simple GO enrichment tester')
+    bp_df = get_pkl_file_with_cache('bp_sparse_df.pkl')
+    cc_df = get_pkl_file_with_cache('cc_sparse_df.pkl')
+    mf_df = get_pkl_file_with_cache('mf_sparse_df.pkl')
+    default_list = get_file_with_cache('default_ranking.txt')
+    go_dictionary_df = get_file_with_cache('go_dictionary_df.csv')
 
-bp_df = get_pkl_file_with_cache('bp_sparse_df.pkl')
-cc_df = get_pkl_file_with_cache('cc_sparse_df.pkl')
-mf_df = get_pkl_file_with_cache('mf_sparse_df.pkl')
-default_list = get_file_with_cache('default_ranking.txt')
-go_dictionary_df = get_file_with_cache('go_dictionary_df.csv')
+    gene_list = st.sidebar.text_area("Ranked Genes (one gene symbol per line)", '\n'.join(default_list.gene_symbol), height=100)
+    pathway_database = st.sidebar.selectbox("Gene Ontology",["Biological Process", "Cellular Component", "Molecular Function", "All"])
+    st.sidebar.write('GO annotations from June 2023.')
+    st.sidebar.divider()
+    st.sidebar.write('Web app developed by Katarina Vucic and Leon French. Source code available on [github](https://github.com/katarinaavucic/GO_enrichment_tool).')
 
-gene_list = st.sidebar.text_area("Ranked genes (one gene symbol per line)", '\n'.join(default_list.gene_symbol), height=100)
-pathway_database = st.sidebar.selectbox("Pathway Database",["Biological Process", "Cellular Component", "Molecular Function", "All"])
+    # select pathway database
+    if pathway_database == "Biological Process":
+        go_annotation_df = bp_df.copy()
+    elif pathway_database == "Cellular Component":
+        go_annotation_df = cc_df.copy()
+    elif pathway_database == "Molecular Function":
+        go_annotation_df = mf_df.copy()
+    else:
+        go_annotation_df = pd.concat([bp_df, cc_df, mf_df], axis=0)
 
-if pathway_database == "Biological Process":
-    go_annotation_df = bp_df.copy()
-elif pathway_database == "Cellular Component":
-    go_annotation_df = cc_df.copy()
-elif pathway_database == "Molecular Function":
-    go_annotation_df = mf_df.copy()
-else:
-    go_annotation_df = pd.concat([bp_df, cc_df, mf_df], axis=0)
+    go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
 
-go_dictionary_df = go_dictionary_df.set_index('go_id').copy()
+    # split the input into a list of genes and remove any empty entries from the list
+    gene_list = gene_list.split('\n')
+    gene_list = [gene.strip() for gene in gene_list if gene.strip()]
 
-#split the input into a list of genes and remove any empty entries from the list
-gene_list = gene_list.split('\n')
-gene_list = [gene.strip() for gene in gene_list if gene.strip()]
+    # generate and display the gene table
+    gene_table(gene_list, go_annotation_df, go_dictionary_df)
 
-#generate and display the gene table
-gene_table(gene_list, go_annotation_df, go_dictionary_df)
+if __name__ == "__main__":
+    main()
 
 
